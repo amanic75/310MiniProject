@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Compound Interest Calculator v2.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .calculator {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            background-color: #e8f5e8;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;
+            border: 2px solid #4CAF50;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+            border: 2px solid #4CAF50;
+        }
+        .chart-title {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: bold;
+        }
+        .hidden {
+            display: none;
+        }
+        canvas {
+            max-height: 400px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>💰 Compound Interest Calculator v2.0</h1>
+        
+        <div class="input-group">
+            <label for="principal">Initial Investment ($):</label>
+            <input type="number" id="principal" placeholder="1000" step="0.01">
+        </div>
+        
+        <div class="input-group">
+            <label for="rate">Interest Rate (% per year):</label>
+            <input type="number" id="rate" placeholder="5" step="0.1">
+        </div>
+        
+        <div class="input-group">
+            <label for="years">Time Period (years):</label>
+            <input type="number" id="years" placeholder="10" step="1" max="50">
+        </div>
+        
+        <button onclick="calculateCompoundInterest()">Calculate Future Value</button>
+        
+        <div id="result" class="result hidden"></div>
+        
+        <div id="chartContainer" class="chart-container hidden">
+            <div class="chart-title">📊 Growth Over Time</div>
+            <canvas id="growthChart"></canvas>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Built with DRIVER loops for MGMT 310 | Formula: FV = PV × (1 + r)^n</p>
+        <p>🔗 <a href="https://github.com/amanic75/310MiniProject">View Source Code</a></p>
+    </div>
+
+    <script>
+        let growthChart = null; // Store chart instance
+        
+        function calculateCompoundInterest() {
+            // Get input values
+            const principal = parseFloat(document.getElementById('principal').value);
+            const rate = parseFloat(document.getElementById('rate').value);
+            const years = parseInt(document.getElementById('years').value);
+            
+            // Basic validation
+            if (isNaN(principal) || isNaN(rate) || isNaN(years)) {
+                alert('Please enter valid numbers in all fields');
+                return;
+            }
+            
+            if (principal <= 0 || rate < 0 || years <= 0) {
+                alert('Please enter positive values');
+                return;
+            }
+            
+            if (years > 50) {
+                alert('Please enter 50 years or fewer for better chart visibility');
+                return;
+            }
+            
+            // Calculate compound interest using Session 2's formula: FV = PV × (1 + r)^n
+            const rateDecimal = rate / 100; // Convert percentage to decimal
+            const futureValue = principal * Math.pow(1 + rateDecimal, years);
+            const totalGrowth = futureValue - principal;
+            
+            // Format results
+            const formattedPrincipal = principal.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+            const formattedFutureValue = futureValue.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+            const formattedGrowth = totalGrowth.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+            
+            // Display result
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <h3>🎯 Your Investment Results</h3>
+                <p><strong>Initial Investment:</strong> ${formattedPrincipal}</p>
+                <p><strong>After ${years} years:</strong> ${formattedFutureValue}</p>
+                <p><strong>Total Growth:</strong> ${formattedGrowth}</p>
+                <p style="font-size: 14px; color: #666; margin-top: 15px;">
+                    Formula used: ${formattedPrincipal} × (1 + ${rate}%)^${years}
+                </p>
+            `;
+            resultDiv.classList.remove('hidden');
+            
+            // Generate data for chart
+            createGrowthChart(principal, rateDecimal, years);
+        }
+        
+        function createGrowthChart(principal, rateDecimal, years) {
+            // Generate year-by-year data
+            const labels = [];
+            const balances = [];
+            
+            for (let year = 0; year <= years; year++) {
+                labels.push(`Year ${year}`);
+                const balance = principal * Math.pow(1 + rateDecimal, year);
+                balances.push(Math.round(balance * 100) / 100); // Round to 2 decimals
+            }
+            
+            // Show chart container
+            document.getElementById('chartContainer').classList.remove('hidden');
+            
+            // Destroy existing chart if it exists
+            if (growthChart) {
+                growthChart.destroy();
+            }
+            
+            // Create new chart
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            growthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Account Balance',
+                        data: balances,
+                        borderColor: '#4CAF50',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Compound Interest Growth Over Time'
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Balance: $' + context.parsed.y.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Allow Enter key to calculate
+        document.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                calculateCompoundInterest();
+            }
+        });
+    </script>
+</body>
+</html>
